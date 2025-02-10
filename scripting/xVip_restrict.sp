@@ -80,7 +80,6 @@ public void OnCommandsLoaded(Database db, DBResultSet results, const char[] erro
     
     // Hook each command
     AddCommandListener(Command_Restricted, command);
-    PrintToServer("[xVip_restrict] Added command listener for: %s", command);
   }
 }
 
@@ -98,28 +97,35 @@ public Action Command_RestrictCommand(int client, int args) {
     strcopy(command, sizeof(command), command[1]);
   }
   
+  DataPack pack = new DataPack();
+  pack.WriteCell(client ? GetClientUserId(client) : 0);
+  pack.WriteString(command);
+
   // Add to database
   char query[256];
   g_Database.Format(query, sizeof(query), "INSERT IGNORE INTO xVip_restrictedcommands (command) VALUES ('%s')", command);
-  g_Database.Query(OnCommandRestricted, query, GetClientUserId(client));
+  g_Database.Query(OnCommandRestricted, query, pack);
   
   // Hook the command immediately
-  AddCommandListener(Command_Restricted, command);
   
   return Plugin_Handled;
 }
 
-public void OnCommandRestricted(Database db, DBResultSet results, const char[] error, any userid) {
-  int client = GetClientOfUserId(userid);
-  if (client == 0)return;
+public void OnCommandRestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
+  pack.Reset();
+  int client = pack.ReadCell();
+  char command[32];
+  pack.ReadString(command, sizeof(command));
+  delete pack;
   
   if (results == null) {
-    xVip_Reply(client, "Failed to restrict command: %s", error);
+    xVip_Reply(client, "Failed to restrict command %s: %s", command, error);
     return;
   }
   
-  LoadRestrictedCommands();
+  g_RestrictedCommands.PushString(command);
   xVip_Reply(client, "Command restricted to VIP users");
+  AddCommandListener(Command_Restricted, command);
 }
 
 public Action Command_UnrestrictCommand(int client, int args) {
@@ -135,29 +141,33 @@ public Action Command_UnrestrictCommand(int client, int args) {
   if (command[0] == '!' || command[0] == '/') {
     strcopy(command, sizeof(command), command[1]);
   }
+
+  DataPack pack = new DataPack();
+  pack.WriteCell(client ? GetClientUserId(client) : 0);
+  pack.WriteString(command);
   
   // Remove from database
   char query[256];
   g_Database.Format(query, sizeof(query), "DELETE FROM xVip_restrictedcommands WHERE command = '%s'", command);
-  g_Database.Query(OnCommandUnrestricted, query, GetClientUserId(client));
-  
-  // Remove the command listener
-  RemoveCommandListener(Command_Restricted, command);
+  g_Database.Query(OnCommandUnrestricted, query, pack);
   
   return Plugin_Handled;
 }
 
-public void OnCommandUnrestricted(Database db, DBResultSet results, const char[] error, any userid) {
-  int client = GetClientOfUserId(userid);
-  if (client == 0)return;
+public void OnCommandUnrestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
+  pack.Reset();
+  int client = pack.ReadCell();
+  char command[32];
+  pack.ReadString(command, sizeof(command));
+  delete pack;
   
   if (results == null) {
-    xVip_Reply(client, "Failed to unrestrict command: %s", error);
+    xVip_Reply(client, "Failed to unrestrict command %s: %s", command, error);
     return;
   }
   
-  LoadRestrictedCommands();
   xVip_Reply(client, "Command restriction removed");
+  RemoveCommandListener(Command_Restricted, command);
 }
 
 public Action Command_Restricted(int client, const char[] command, int argc) {
