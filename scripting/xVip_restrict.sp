@@ -113,11 +113,12 @@ public Action Command_RestrictCommand(int client, int args) {
 
 public void OnCommandRestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
   pack.Reset();
-  int client = pack.ReadCell();
+  int userid = pack.ReadCell();
   char command[32];
   pack.ReadString(command, sizeof(command));
   delete pack;
   
+  int client = GetClientOfUserId(userid);
   if (results == null) {
     xVip_Reply(client, "Failed to restrict command %s: %s", command, error);
     return;
@@ -156,11 +157,12 @@ public Action Command_UnrestrictCommand(int client, int args) {
 
 public void OnCommandUnrestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
   pack.Reset();
-  int client = pack.ReadCell();
+  int userid = pack.ReadCell();
   char command[32];
   pack.ReadString(command, sizeof(command));
   delete pack;
-  
+
+  int client = GetClientOfUserId(userid);
   if (results == null) {
     xVip_Reply(client, "Failed to unrestrict command %s: %s", command, error);
     return;
