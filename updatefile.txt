@@ -1,0 +1,16 @@
+"Updater"
+{
+	"Information"
+	{
+		"Version"
+		{
+			"Latest"	"1.0"
+		}
+	}
+	
+	"Files"
+	{
+		"Plugin"	"Path_SM/plugins/xVip_restrict.smx"		
+		"Source"	"Path_SM/scripting/xVip_restrict.sp"
+	}
+}

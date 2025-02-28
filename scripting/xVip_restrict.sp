@@ -4,10 +4,14 @@
 #include <sourcemod>
 #include <xVip>
 
-#define PLUGIN_VERSION "1.0"
+#undef REQUIRE_PLUGIN
+#include <updater>
 
-Database g_Database = null;
-ArrayList g_RestrictedCommands = null;
+#define PLUGIN_VERSION "1.0"
+#define UPDATE_URL "https://raw.githubusercontent.com/maxijabase/xVip_restrict/main/updatefile.txt"
+
+Database g_Database;
+ArrayList g_RestrictedCommands;
 
 public Plugin myinfo = {
   name = "xVip - Restrict Commands", 
@@ -27,6 +31,11 @@ public void OnPluginStart() {
   RegAdminCmd("sm_vip_restrict", Command_RestrictCommand, ADMFLAG_ROOT, "Restrict a command to VIP users");
   RegAdminCmd("sm_vip_unrestrict", Command_UnrestrictCommand, ADMFLAG_ROOT, "Remove VIP restriction from a command");
   RegAdminCmd("sm_vip_restricted", Command_ListRestrictedCommands, ADMFLAG_ROOT, "List restricted commands");
+}
+
+public void Updater_OnLoaded()
+{
+  Updater_AddPlugin(UPDATE_URL);
 }
 
 public void OnDatabaseConnect(Database db, const char[] error, any data) {
@@ -104,14 +113,14 @@ public Action Command_RestrictCommand(int client, int args) {
   // Add to database
   char query[256];
   g_Database.Format(query, sizeof(query), "INSERT IGNORE INTO xVip_restrictedcommands (command) VALUES ('%s')", command);
-  g_Database.Query(OnCommandRestricted, query, pack);
+  g_Database.Query(SQL_OnCommandRestricted, query, pack);
   
   // Hook the command immediately
   
   return Plugin_Handled;
 }
 
-public void OnCommandRestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
+public void SQL_OnCommandRestricted(Database db, DBResultSet results, const char[] error, DataPack pack) {
   pack.Reset();
   int userid = pack.ReadCell();
   char command[32];
@@ -170,6 +179,8 @@ public void OnCommandUnrestricted(Database db, DBResultSet results, const char[]
   
   xVip_Reply(client, "Command restriction removed");
   RemoveCommandListener(Command_Restricted, command);
+  int commandPosition = g_RestrictedCommands.FindString(command);
+  g_RestrictedCommands.Erase(commandPosition);
 }
 
 public Action Command_Restricted(int client, const char[] command, int argc) {
